@@ -1,6 +1,5 @@
 package platform.media.mockobjectserver.exception;
 
-import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatusCode;
 import org.springframework.http.ProblemDetail;
