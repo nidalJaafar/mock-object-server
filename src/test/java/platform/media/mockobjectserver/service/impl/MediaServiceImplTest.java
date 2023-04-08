@@ -3,36 +3,78 @@ package platform.media.mockobjectserver.service.impl;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.InjectMocks;
+
+import org.mockito.Mock;
+import org.mockito.Spy;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.mock.web.MockMultipartFile;
+import org.springframework.core.io.FileSystemResource;
+import org.springframework.http.codec.multipart.FilePart;
+import platform.media.mockobjectserver.exception.MediaServiceException;
+import reactor.core.publisher.Mono;
 
 import java.io.File;
+import java.io.IOException;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.Arrays;
-import java.util.Objects;
 
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
 public class MediaServiceImplTest {
 
-    @InjectMocks
-    private MediaServiceImpl mediaService;
+    @Mock
+    private FilePart filePart;
+    @Spy
+    private final MediaServiceImpl mediaService = new MediaServiceImpl();
 
-    private final Path fileStorageLocation = Paths.get("./uploads/files");
-
+    private final Path fileStorageLocation = Paths.get("files");
 
     @Test
-    public void testUpload() {
+    public void testPostConstructCreatesFileStorageDirectory() throws IOException {
+        Path fileStorageLocation = Paths.get("./uploads/files");
+        mediaService.postConstruct();
+        assertTrue(Files.isDirectory(fileStorageLocation));
+    }
 
-        MockMultipartFile file = new MockMultipartFile("temp-file", "temp-file.txt", "text/plain", "Hello World!".getBytes());
-        String result = mediaService.upload(file);
-        boolean match = Arrays.stream(Objects.requireNonNull(new File(fileStorageLocation.toUri())
-                        .listFiles()))
-                .map(File::getName)
-                .anyMatch(name -> name.equals(result));
-        assertTrue(match);
+    @Test
+    public void testUploadSuccess() throws IOException {
+        String content = "Hello World!";
+        Path tempFile = Path.of("uploads/files/123-test.txt");
+        Files.createFile(tempFile);
+        Files.write(tempFile, content.getBytes());
+
+        when(mediaService.getFileName(filePart)).thenReturn("123-test.txt");
+        when(filePart.transferTo(any(Path.class))).thenReturn(Mono.empty());
+        String uploadedFileName = mediaService.upload(filePart).block();
+
+        Path uploadedFilePath = new File("uploads/files/" + uploadedFileName).toPath();
+        assertTrue(uploadedFilePath.toFile().exists());
+        assertEquals(content, new String(Files.readAllBytes(uploadedFilePath)));
+
+        Files.delete(tempFile);
+    }
+
+    @Test
+    public void testDownloadFileNotFound() {
+        assertThrows(MediaServiceException.class, () -> {
+            mediaService.download("nonexistent-file.txt").block();
+        });
+    }
+
+    @Test
+    public void testDownloadSuccess() throws IOException {
+        String content = "Hello World!";
+        Path tempFile = Files.createFile(Path.of("uploads/files/test-file.txt"));
+        Files.write(tempFile, content.getBytes());
+
+        FileSystemResource downloadedFile = mediaService.download("test-file.txt").block();
+
+        assertNotNull(downloadedFile);
+        assertEquals(content, new String(Files.readAllBytes(Path.of(downloadedFile.getPath()))));
+
+        Files.delete(tempFile);
     }
 }

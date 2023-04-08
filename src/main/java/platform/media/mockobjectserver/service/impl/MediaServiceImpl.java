@@ -1,51 +1,70 @@
 package platform.media.mockobjectserver.service.impl;
 
+import jakarta.annotation.PostConstruct;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.core.io.FileSystemResource;
+import org.springframework.http.codec.multipart.FilePart;
 import org.springframework.stereotype.Service;
-import org.springframework.web.multipart.MultipartFile;
 import platform.media.mockobjectserver.exception.MediaServiceException;
 import platform.media.mockobjectserver.service.MediaService;
+import reactor.core.publisher.Mono;
 
-import java.io.IOException;
-import java.io.InputStream;
+import java.io.File;
+import java.io.FileNotFoundException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.nio.file.StandardCopyOption;
-import java.util.Properties;
 import java.util.UUID;
 
 @Service
+@Slf4j
+@RequiredArgsConstructor
 public class MediaServiceImpl implements MediaService {
 
-    private final Path fileStorageLocation;
-    private final Properties prop;
+    @Value("${base.folder}")
+    private String baseFolder = "uploads/files/";
+    private final Path fileStorageLocation = Paths.get(baseFolder).toAbsolutePath().normalize();
 
-    public MediaServiceImpl() {
-        prop = new Properties();
-        try (InputStream inputStream = getClass().getClassLoader().getResourceAsStream("messages.properties")) {
-            prop.load(inputStream);
-        } catch (IOException e) {
-            throw new MediaServiceException("Messages file not found", e);
-        }
 
-        fileStorageLocation = Paths.get("./uploads/files").toAbsolutePath().normalize();
+    @PostConstruct
+    public void postConstruct() {
         try {
             Files.createDirectories(fileStorageLocation);
         } catch (Exception ex) {
-            throw new MediaServiceException(prop.getProperty("message.could-not-create-file"), ex);
+            throw new MediaServiceException("Exception.could-not-create-file", ex, 500);
         }
     }
-
 
     @Override
-    public String upload(MultipartFile request) {
-        String fileName = UUID.randomUUID() + "-" + request.getOriginalFilename();
-        try {
-            Path targetLocation = fileStorageLocation.resolve(fileName);
-            Files.copy(request.getInputStream(), targetLocation, StandardCopyOption.REPLACE_EXISTING);
-            return fileName;
-        } catch (IOException ex) {
-            throw new MediaServiceException(prop.getProperty("message.could-not-store-file"), ex);
-        }
+    public Mono<String> upload(FilePart request) {
+        String fileName = getFileName(request);
+        Path targetLocation = fileStorageLocation.resolve(fileName);
+        return request
+                .transferTo(targetLocation)
+                .doOnError(ex -> {
+                    throw new MediaServiceException("Exception.could-not-store-file", ex, 500);
+                })
+                .doOnSuccess(v -> {
+                    log.info("uploaded file {}", targetLocation.toString());
+                })
+                .then(Mono.just(fileName));
     }
+
+    protected String getFileName(FilePart request) {
+        return UUID.randomUUID() + "-" + request.filename();
+    }
+
+    @Override
+    public Mono<FileSystemResource> download(String name) {
+        return Mono.just(new File(baseFolder + name))
+                .filter(File::exists)
+                .switchIfEmpty(Mono.error(new MediaServiceException("Exception.file-not-found", new FileNotFoundException(), 404)))
+                .map(FileSystemResource::new)
+                .doOnSuccess(resource -> {
+                    log.info("downloaded file {}", fileStorageLocation.resolve(name).toString());
+                });
+    }
+
 }
