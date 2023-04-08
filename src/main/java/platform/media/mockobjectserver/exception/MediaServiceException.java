@@ -1,14 +1,13 @@
 package platform.media.mockobjectserver.exception;
 
 import lombok.Getter;
-import org.springframework.http.HttpStatusCode;
 
 @Getter
 public class MediaServiceException extends RuntimeException {
-    private final HttpStatusCode httpStatusCode;
+    private final Integer statusCode;
 
-    public MediaServiceException(String message, Throwable throwable, HttpStatusCode httpStatusCode) {
-        super(message, throwable);
-        this.httpStatusCode = httpStatusCode;
+    public MediaServiceException(String message, Throwable cause, Integer statusCode) {
+        super(message, cause);
+        this.statusCode = statusCode;
     }
 }
