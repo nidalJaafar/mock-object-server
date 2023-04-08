@@ -1,12 +1,12 @@
 pipeline {
-    agent any
+    agent docker
 
     stages {
         stage('Docker') {
             steps {
                 sh '''
-                docker build -t localhost:5000/nidaljaafar/mock-object-server:3.0
-                docker push localhost:5000/nidaljaafar/mock-object-server:3.0
+                docker build -t registry:5000/nidaljaafar/mock-object-server:3.0
+                docker push registry:5000/nidaljaafar/mock-object-server:3.0
                 '''
             }
         }
