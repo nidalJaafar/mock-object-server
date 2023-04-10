@@ -6,11 +6,6 @@ pipeline {
         gradle 'gradle'
     }
     stages {
-        stage ('Clone GitHub Repository') {
-            steps {
-                git branch: 'main', url: 'https://github.com/nidalJaafar/mock-object-server.git'
-            }
-        }
         stage ('Read Project Version') {
             steps {
                 // read the project version from Gradle and store it as a variable
