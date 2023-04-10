@@ -8,7 +8,7 @@ pipeline {
     stages {
         stage ('Clone GitHub Repository') {
             steps {
-                git branch: 'fd_docker', url: 'https://github.com/nidalJaafar/mock-object-server.git'
+                git branch: 'main', url: 'https://github.com/nidalJaafar/mock-object-server.git'
             }
         }
         stage ('Read Project Version') {
