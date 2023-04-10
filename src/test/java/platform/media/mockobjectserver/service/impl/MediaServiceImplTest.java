@@ -1,9 +1,11 @@
 package platform.media.mockobjectserver.service.impl;
 
 
+import lombok.extern.slf4j.Slf4j;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-
 import org.mockito.Mock;
 import org.mockito.Spy;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -17,11 +19,14 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.Comparator;
+import java.util.stream.Stream;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
 
+@Slf4j
 @ExtendWith(MockitoExtension.class)
 public class MediaServiceImplTest {
 
@@ -30,10 +35,29 @@ public class MediaServiceImplTest {
     @Spy
     private final MediaServiceImpl mediaService = new MediaServiceImpl();
 
-    private final Path fileStorageLocation = Paths.get("files");
+    @BeforeAll
+    public static void createDirectory() {
+        File file = new File("uploads/files");
+        if (file.mkdirs()) {
+            log.info("new folders created");
+        }
+    }
+
+    @AfterAll
+    public static void destroyDirectory() throws IOException {
+        try (Stream<Path> pathStream = Files.walk(Path.of("uploads"))) {
+            pathStream.sorted(Comparator.reverseOrder())
+                    .map(Path::toFile)
+                    .forEach(file -> {
+                        if (file.delete()) {
+                            log.info("test file: {} deleted", file.getName());
+                        }
+                    });
+        }
+    }
 
     @Test
-    public void testPostConstructCreatesFileStorageDirectory() throws IOException {
+    public void testPostConstructCreatesFileStorageDirectory() {
         Path fileStorageLocation = Paths.get("./uploads/files");
         mediaService.postConstruct();
         assertTrue(Files.isDirectory(fileStorageLocation));
@@ -59,9 +83,7 @@ public class MediaServiceImplTest {
 
     @Test
     public void testDownloadFileNotFound() {
-        assertThrows(MediaServiceException.class, () -> {
-            mediaService.download("nonexistent-file.txt").block();
-        });
+        assertThrows(MediaServiceException.class, () -> mediaService.download("nonexistent-file.txt").block());
     }
 
     @Test
