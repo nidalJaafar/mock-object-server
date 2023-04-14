@@ -12,6 +12,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.core.io.FileSystemResource;
 import org.springframework.http.codec.multipart.FilePart;
 import platform.media.mockobjectserver.exception.MediaServiceException;
+import platform.media.mockobjectserver.response.UploadResponse;
 import reactor.core.publisher.Mono;
 
 import java.io.File;
@@ -72,9 +73,10 @@ public class MediaServiceImplTest {
 
         when(mediaService.getFileName(filePart)).thenReturn("123-test.txt");
         when(filePart.transferTo(any(Path.class))).thenReturn(Mono.empty());
-        String uploadedFileName = mediaService.upload(filePart).block();
+        UploadResponse uploadedFileName = mediaService.upload(filePart).block();
 
-        Path uploadedFilePath = new File("uploads/files/" + uploadedFileName).toPath();
+        assertNotNull(uploadedFileName);
+        Path uploadedFilePath = new File("uploads/files/" + uploadedFileName.getFileName()).toPath();
         assertTrue(uploadedFilePath.toFile().exists());
         assertEquals(content, new String(Files.readAllBytes(uploadedFilePath)));
 

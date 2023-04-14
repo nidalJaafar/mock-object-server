@@ -13,6 +13,7 @@ import org.springframework.http.MediaType;
 import org.springframework.http.client.MultipartBodyBuilder;
 import org.springframework.test.web.reactive.server.WebTestClient;
 import org.springframework.web.reactive.function.BodyInserters;
+import platform.media.mockobjectserver.response.UploadResponse;
 import platform.media.mockobjectserver.service.MediaService;
 import reactor.core.publisher.Mono;
 
@@ -24,6 +25,8 @@ import java.nio.file.Path;
 import java.util.Comparator;
 import java.util.stream.Stream;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.when;
@@ -66,18 +69,23 @@ class MediaControllerTest {
         File file = new File("uploads/files/sample-file.txt");
         Files.createFile(file.toPath());
 
-        when(mediaService.upload(any())).thenReturn(Mono.just(file.getName()));
+        when(mediaService.upload(any())).thenReturn(Mono.just(new UploadResponse().setFileName(file.getName())));
 
         MultipartBodyBuilder bodyBuilder = new MultipartBodyBuilder();
         bodyBuilder.part("file", new FileSystemResource(file));
 
-        webTestClient.post()
+        String fileName = webTestClient.post()
                 .uri("/api/v1/upload")
                 .contentType(MediaType.MULTIPART_FORM_DATA)
                 .body(BodyInserters.fromMultipartData(bodyBuilder.build()))
                 .exchange()
                 .expectStatus().isOk()
-                .expectBody(String.class).isEqualTo(file.getName());
+                .expectBody(UploadResponse.class)
+                .returnResult()
+                .getResponseBody()
+                .getFileName();
+        assertNotNull(fileName);
+        assertEquals("sample-file.txt", fileName);
         Files.delete(file.toPath());
     }
 

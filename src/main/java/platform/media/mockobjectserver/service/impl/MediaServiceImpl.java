@@ -8,6 +8,7 @@ import org.springframework.core.io.FileSystemResource;
 import org.springframework.http.codec.multipart.FilePart;
 import org.springframework.stereotype.Service;
 import platform.media.mockobjectserver.exception.MediaServiceException;
+import platform.media.mockobjectserver.response.UploadResponse;
 import platform.media.mockobjectserver.service.MediaService;
 import reactor.core.publisher.Mono;
 
@@ -38,7 +39,7 @@ public class MediaServiceImpl implements MediaService {
     }
 
     @Override
-    public Mono<String> upload(FilePart request) {
+    public Mono<UploadResponse> upload(FilePart request) {
         String fileName = getFileName(request);
         Path targetLocation = fileStorageLocation.resolve(fileName);
         return request
@@ -49,7 +50,7 @@ public class MediaServiceImpl implements MediaService {
                 .doOnSuccess(v -> {
                     log.info("uploaded file {}", targetLocation.toString());
                 })
-                .then(Mono.just(fileName));
+                .then(Mono.just(new UploadResponse().setFileName(fileName)));
     }
 
     protected String getFileName(FilePart request) {

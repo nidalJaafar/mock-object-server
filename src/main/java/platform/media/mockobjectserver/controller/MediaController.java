@@ -4,6 +4,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.core.io.FileSystemResource;
 import org.springframework.http.codec.multipart.FilePart;
 import org.springframework.web.bind.annotation.*;
+import platform.media.mockobjectserver.response.UploadResponse;
 import platform.media.mockobjectserver.service.MediaService;
 import reactor.core.publisher.Mono;
 
@@ -15,7 +16,7 @@ public class MediaController {
     private final MediaService service;
 
     @PostMapping("/upload")
-    public Mono<String> upload(@RequestPart("file") FilePart request) {
+    public Mono<UploadResponse> upload(@RequestPart("file") FilePart request) {
         return service.upload(request);
     }
 
