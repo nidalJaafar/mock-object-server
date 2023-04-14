@@ -40,5 +40,6 @@ tasks.named('jacocoTestReport') {
 
 jgitver {
     strategy Strategies.MAVEN
+    nonQualifierBranches 'main'
     autoIncrementPatch true
 }
